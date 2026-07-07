@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BBB 트랜스사이토시스 성공률 시뮬레이터</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root{
+    --bg:#f7f6f2;
+    --card:#ffffff;
+    --border:#e2e0d8;
+    --text-primary:#171716;
+    --text-secondary:#5c5a53;
+    --text-muted:#8b8981;
+    --accent:#185fa5;
+    --accent-bg:#e6f1fb;
+    --danger:#e34948;
+    --radius:10px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#17171a;
+      --card:#1f1f22;
+      --border:#3a3a3d;
+      --text-primary:#f2f1ec;
+      --text-secondary:#c3c2b7;
+      --text-muted:#8b8981;
+      --accent:#5aa4e6;
+      --accent-bg:#0c2a44;
+    }
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    padding:2rem 1rem 4rem;
+    background:var(--bg);
+    color:var(--text-primary);
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+    line-height:1.6;
+  }
+  .wrap{
+    max-width:760px;
+    margin:0 auto;
+  }
+  h1{
+    font-size:22px;
+    font-weight:600;
+    margin:0 0 0.25rem;
+  }
+  p.sub{
+    color:var(--text-secondary);
+    font-size:14px;
+    margin:0 0 2rem;
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:1.5rem;
+    margin-bottom:1.5rem;
+  }
+  .formula{
+    text-align:center;
+    font-size:15px;
+    color:var(--text-secondary);
+    background:var(--accent-bg);
+    border-radius:var(--radius);
+    padding:0.75rem;
+    margin-bottom:1.5rem;
+  }
+  .grid2{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:16px 24px;
+  }
+  .slider-row{margin-bottom:0.25rem;}
+  .slider-label{
+    display:flex;
+    justify-content:space-between;
+    font-size:13px;
+    color:var(--text-secondary);
+    margin-bottom:4px;
+  }
+  .slider-label span.val{
+    font-weight:600;
+    color:var(--text-primary);
+  }
+  input[type=range]{
+    width:100%;
+    accent-color:var(--accent);
+    height:4px;
+  }
+  .stat-grid{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0,1fr));
+    gap:12px;
+    margin-top:1.5rem;
+  }
+  .stat{
+    background:var(--bg);
+    border-radius:var(--radius);
+    padding:0.75rem 1rem;
+  }
+  .stat.final{
+    background:var(--accent-bg);
+  }
+  .stat .label{font-size:12px; color:var(--text-secondary);}
+  .stat.final .label{color:var(--accent);}
+  .stat .value{font-size:20px; font-weight:600; margin-top:2px;}
+  .stat.final .value{color:var(--accent);}
+  .funnel-row{margin-bottom:8px;}
+  .funnel-label{
+    display:flex;
+    justify-content:space-between;
+    font-size:12px;
+    color:var(--text-secondary);
+    margin-bottom:3px;
+  }
+  .funnel-bar{
+    height:10px;
+    background:var(--bg);
+    border-radius:5px;
+    overflow:hidden;
+  }
+  .funnel-fill{
+    height:100%;
+    background:var(--accent);
+    border-radius:5px;
+    transition:width 0.15s ease;
+  }
+  .chart-wrap{
+    position:relative;
+    height:280px;
+  }
+  .chart-caption{
+    text-align:center;
+    font-size:12px;
+    color:var(--text-muted);
+    margin-top:0.5rem;
+  }
+  footer{
+    text-align:center;
+    font-size:12px;
+    color:var(--text-muted);
+    margin-top:2rem;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>혈액-뇌 장벽(BBB) 트랜스사이토시스 성공률 시뮬레이터</h1>
+  <p class="sub">수용체 매개 트랜스사이토시스(RMT)의 세 단계 확률을 조절하며, 리간드 밀도를 늘려도 왜 성공률이 정체되는지(수용체 포화) 확인해보세요.</p>
+
+  <div class="card">
+    <div class="formula">P<sub>성공</sub> &nbsp;=&nbsp; P<sub>결합</sub>(L, K<sub>d</sub>) &nbsp;×&nbsp; P<sub>리소솜회피</sub> &nbsp;×&nbsp; P<sub>반대편방출</sub></div>
+
+    <div class="grid2">
+      <div class="slider-row">
+        <div class="slider-label"><span>리간드 밀도 (L)</span><span class="val" id="L-out">30</span></div>
+        <input type="range" id="L" min="0" max="100" step="1" value="30">
+      </div>
+      <div class="slider-row">
+        <div class="slider-label"><span>해리상수 K<sub>d</sub> (경쟁 강도)</span><span class="val" id="Kd-out">20</span></div>
+        <input type="range" id="Kd" min="1" max="80" step="1" value="20">
+      </div>
+      <div class="slider-row">
+        <div class="slider-label"><span>리소솜 회피율 (P<sub>회피</sub>)</span><span class="val" id="Plyso-out">40%</span></div>
+        <input type="range" id="Plyso" min="0" max="100" step="1" value="40">
+      </div>
+      <div class="slider-row">
+        <div class="slider-label"><span>반대편 방출률 (P<sub>방출</sub>)</span><span class="val" id="Pexo-out">50%</span></div>
+        <input type="range" id="Pexo" min="0" max="100" step="1" value="50">
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat"><div class="label">P<sub>결합</sub></div><div class="value" id="pbind-val">60%</div></div>
+      <div class="stat"><div class="label">× 리소솜 회피</div><div class="value" id="plyso-val">40%</div></div>
+      <div class="stat"><div class="label">× 반대편 방출</div><div class="value" id="pexo-val">50%</div></div>
+      <div class="stat final"><div class="label">최종 성공률</div><div class="value" id="final-val">12%</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <p style="font-size:13px; color:var(--text-secondary); margin:0 0 10px;">나노입자 1만개 기준 단계별 생존 개수</p>
+    <div id="funnel"></div>
+  </div>
+
+  <div class="card">
+    <div class="chart-wrap">
+      <canvas id="curveChart" role="img" aria-label="리간드 밀도에 따른 결합확률 포화곡선, 현재 위치 표시"></canvas>
+    </div>
+    <div class="chart-caption">가로축: 리간드 밀도(L) · 세로축: P_결합 = L / (L + Kd) · 붉은 점: 현재 슬라이더 위치</div>
+  </div>
+
+  <footer>생명과학 수행평가 — BBB 트랜스사이토시스 확률 모델 시뮬레이터</footer>
+</div>
+
+<script>
+const L_in = document.getElementById('L');
+const Kd_in = document.getElementById('Kd');
+const Plyso_in = document.getElementById('Plyso');
+const Pexo_in = document.getElementById('Pexo');
+
+const curveColor = '#2a78d6';
+const dotColor = '#e34948';
+
+let chart;
+
+function computeCurve(Kd){
+  const labels = [];
+  const data = [];
+  for(let L = 0; L <= 100; L += 2){
+    labels.push(L);
+    data.push((L / (L + Kd)) * 100);
+  }
+  return { labels, data };
+}
+
+function buildFunnel(n0, pbind, plyso, pexo){
+  const n1 = Math.round(n0 * pbind);
+  const n2 = Math.round(n1 * plyso);
+  const n3 = Math.round(n2 * pexo);
+  const stages = [
+    { label: '주입', n: n0 },
+    { label: '결합 성공', n: n1 },
+    { label: '리소솜 회피', n: n2 },
+    { label: '뇌 조직 방출', n: n3 },
+  ];
+  const max = n0;
+  document.getElementById('funnel').innerHTML = stages.map(s => {
+    const pct = (s.n / max) * 100;
+    return '<div class="funnel-row">' +
+      '<div class="funnel-label"><span>' + s.label + '</span><span>' + s.n.toLocaleString() + '개</span></div>' +
+      '<div class="funnel-bar"><div class="funnel-fill" style="width:' + pct + '%;"></div></div>' +
+    '</div>';
+  }).join('');
+}
+
+function update(){
+  const L = parseFloat(L_in.value);
+  const Kd = parseFloat(Kd_in.value);
+  const plysoPct = parseFloat(Plyso_in.value);
+  const pexoPct = parseFloat(Pexo_in.value);
+
+  document.getElementById('L-out').textContent = L;
+  document.getElementById('Kd-out').textContent = Kd;
+  document.getElementById('Plyso-out').textContent = plysoPct + '%';
+  document.getElementById('Pexo-out').textContent = pexoPct + '%';
+
+  const pbind = L / (L + Kd);
+  const plyso = plysoPct / 100;
+  const pexo = pexoPct / 100;
+  const pfinal = pbind * plyso * pexo;
+
+  document.getElementById('pbind-val').textContent = (pbind * 100).toFixed(1) + '%';
+  document.getElementById('plyso-val').textContent = plysoPct + '%';
+  document.getElementById('pexo-val').textContent = pexoPct + '%';
+  document.getElementById('final-val').textContent = (pfinal * 100).toFixed(2) + '%';
+
+  buildFunnel(10000, pbind, plyso, pexo);
+
+  const { labels, data } = computeCurve(Kd);
+  chart.data.labels = labels;
+  chart.data.datasets[0].data = data;
+  chart.data.datasets[1].data = [{ x: L, y: pbind * 100 }];
+  chart.update('none');
+}
+
+const ctx = document.getElementById('curveChart');
+chart = new Chart(ctx, {
+  data: {
+    labels: [],
+    datasets: [
+      {
+        type: 'line',
+        label: 'P_결합 (%)',
+        data: [],
+        borderColor: curveColor,
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.2,
+        order: 2
+      },
+      {
+        type: 'scatter',
+        label: '현재 위치',
+        data: [],
+        backgroundColor: dotColor,
+        borderColor: '#fff',
+        borderWidth: 2,
+        pointRadius: 6,
+        order: 1
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: { type: 'linear', title: { display: true, text: '리간드 밀도 (L)' }, min: 0, max: 100 },
+      y: { title: { display: true, text: 'P_결합 (%)' }, min: 0, max: 100 }
+    },
+    plugins: { legend: { display: false } }
+  }
+});
+
+[L_in, Kd_in, Plyso_in, Pexo_in].forEach(el => el.addEventListener('input', update));
+update();
+</script>
+</body>
+</html>
